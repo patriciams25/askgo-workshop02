@@ -1,0 +1,34 @@
+# Dependências
+node_modules/
+
+# Build
+dist/
+storybook-static/
+*.tsbuildinfo
+
+# Variáveis de ambiente — NUNCA versionar segredos.
+# Só o arquivo de exemplo (sem valores reais) vai para o GitHub.
+.env
+.env.*
+!.env.example
+
+# Vercel / Supabase local
+.vercel/
+supabase/.branches/
+supabase/.temp/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+*.log
+
+# Sistema / editor
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Capturas de teste locais
+preview-*.jpg

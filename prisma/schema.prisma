@@ -1,0 +1,141 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  schemas  = ["public"]
+}
+
+// auth.users é gerenciado pelo Supabase. Mantemos os UUIDs como escalares e
+// não colocamos os schemas internos auth/storage sob o controle do Prisma.
+model Profile {
+  id             String   @id @db.Uuid
+  name           String   @default("")
+  balance        Decimal  @default(0) @db.Decimal(12, 2)
+  hideBalance    Boolean  @default(false) @map("hide_balance")
+  monthCap       Decimal  @default(0) @map("month_cap") @db.Decimal(12, 2)
+  plus           Boolean  @default(false)
+  lastMonthTotal Decimal  @default(0) @map("last_month_total") @db.Decimal(12, 2)
+  frontCardId    String?  @map("front_card_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+  frontCard      Card?    @relation("ProfileFrontCard", fields: [frontCardId], references: [id], onDelete: SetNull)
+
+  @@map("profiles")
+  @@schema("public")
+}
+
+model Card {
+  id               String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String        @default(dbgenerated("auth.uid()")) @map("user_id") @db.Uuid
+  name             String
+  last4            String        @db.Char(4)
+  color            String        @default("gradient")
+  creditLimit      Decimal       @map("credit_limit") @db.Decimal(12, 2)
+  invoice          Decimal       @default(0) @db.Decimal(12, 2)
+  dueDay           Int?          @map("due_day") @db.SmallInt
+  currentInvoiceId String?       @map("current_invoice_id") @db.Uuid
+  createdAt        DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime      @default(now()) @map("updated_at") @db.Timestamptz(6)
+  transactions     Transaction[]
+  invoices         Invoice[]     @relation("InvoiceCard")
+  currentInvoice   Invoice?      @relation("CurrentInvoice", fields: [currentInvoiceId], references: [id], onDelete: SetNull)
+  frontForProfiles Profile[]     @relation("ProfileFrontCard")
+
+  @@index([userId])
+  @@map("cards")
+  @@schema("public")
+}
+
+model Transaction {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String   @default(dbgenerated("auth.uid()")) @map("user_id") @db.Uuid
+  name         String
+  category     String
+  cardId       String?  @map("card_id") @db.Uuid
+  method       String   @default("card")
+  value        Decimal  @db.Decimal(12, 2)
+  spentOn      DateTime @default(dbgenerated("CURRENT_DATE")) @map("spent_on") @db.Date
+  source       String   @default("manual")
+  invoiceId    String?  @map("invoice_id") @db.Uuid
+  subscription Boolean  @default(false)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+  card         Card?    @relation(fields: [cardId], references: [id], onDelete: SetNull)
+  invoice      Invoice? @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([userId, spentOn(sort: Desc)])
+  @@index([invoiceId])
+  @@map("transactions")
+  @@schema("public")
+}
+
+model Budget {
+  userId    String   @map("user_id") @db.Uuid
+  category  String
+  cap       Decimal  @db.Decimal(12, 2)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  @@id([userId, category])
+  @@index([userId])
+  @@map("budgets")
+  @@schema("public")
+}
+
+model Goal {
+  id          String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String             @default(dbgenerated("auth.uid()")) @map("user_id") @db.Uuid
+  name        String
+  target      Decimal            @db.Decimal(12, 2)
+  saved       Decimal            @default(0) @db.Decimal(12, 2)
+  targetLabel String?            @map("target_label")
+  icon        String             @default("star")
+  createdAt   DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime           @default(now()) @map("updated_at") @db.Timestamptz(6)
+  contributions GoalContribution[]
+
+  @@index([userId])
+  @@map("goals")
+  @@schema("public")
+}
+
+model GoalContribution {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @default(dbgenerated("auth.uid()")) @map("user_id") @db.Uuid
+  goalId    String   @map("goal_id") @db.Uuid
+  amount    Decimal  @db.Decimal(12, 2)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+  goal      Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  @@index([userId, goalId, createdAt])
+  @@map("goal_contributions")
+  @@schema("public")
+}
+
+model Invoice {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId             String   @default(dbgenerated("auth.uid()")) @map("user_id") @db.Uuid
+  cardId             String?  @map("card_id") @db.Uuid
+  fingerprint        String
+  fileName           String?  @map("file_name")
+  fileMimeType       String?  @map("file_mime_type")
+  fileSizeBytes      BigInt?  @map("file_size_bytes")
+  storagePath        String?  @map("storage_path")
+  total              Decimal  @db.Decimal(12, 2)
+  itemsCount         Int      @default(0) @map("items_count")
+  subscriptionsCount Int      @default(0) @map("subscriptions_count")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+  card               Card?    @relation("InvoiceCard", fields: [cardId], references: [id], onDelete: SetNull)
+  currentForCards    Card[]   @relation("CurrentInvoice")
+  transactions       Transaction[]
+
+  @@unique([userId, fingerprint])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("invoices")
+  @@schema("public")
+}

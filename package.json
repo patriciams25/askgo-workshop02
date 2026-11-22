@@ -1,0 +1,33 @@
+{
+  "name": "eskgo-claude",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "typecheck:api": "tsc --noEmit --strict --target es2022 --module esnext --moduleResolution bundler --types node --skipLibCheck --lib es2022,dom api/_auth.ts api/_openai.ts api/chat.ts api/invoice.ts",
+    "test": "esbuild tests/state.test.ts --bundle --platform=node --format=esm --log-level=warning --outfile=node_modules/.cache/eskgo/state.test.mjs && node node_modules/.cache/eskgo/state.test.mjs",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.119.2",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@storybook/addon-docs": "^10.6.8",
+    "@storybook/react-vite": "^10.6.8",
+    "@tailwindcss/vite": "^4.1.8",
+    "@types/node": "^22.20.5",
+    "@types/react": "^19.1.6",
+    "@types/react-dom": "^19.1.5",
+    "@vitejs/plugin-react": "^4.5.0",
+    "storybook": "^10.6.8",
+    "tailwindcss": "^4.1.8",
+    "typescript": "~5.8.3",
+    "vite": "^6.3.5"
+  }
+}
